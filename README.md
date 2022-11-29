@@ -4,7 +4,8 @@ free, Small and experimental lossless photographic image compression library wit
 It's compression ratio much better than PNG for photographic images and non photographic images.
 The goal was to see if I could create a better lossless compressor than PNG in just several hours) using Zpaq and some past experience.  Zpaq is powerfull library.
 I'm not expecting anyone else to use this, but feel free if you need some high compression ratio.
-output of zqoi after decompressing is qoi format so if you want to look the result please install software that supports qoi format like irfanview 32 bit.
+Now output of zqoi after decompressing is in PNG format, so just open it.
+first put qoiconv.exe and zqoi.exe on drive D: and then run d:\zqoi.exe
 
 #### Example results
 

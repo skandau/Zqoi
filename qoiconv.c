@@ -54,8 +54,8 @@ int main(int argc, char **argv) {
 	if (argc < 3) {
 		puts("Usage: qoiconv <infile> <outfile>");
 		puts("Examples:");
-		puts("  qoiconv input.png output.qoi");
-		puts("  qoiconv input.qoi output.png");
+		puts("  qoiconv input.png output.tmp");
+		puts("  qoiconv input.tmp output.png");
 		exit(1);
 	}
 
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 
 		pixels = (void *)stbi_load(argv[1], &w, &h, NULL, channels);
 	}
-	else if (STR_ENDS_WITH(argv[1], ".qoi")) {
+	else if (STR_ENDS_WITH(argv[1], ".tmp")) {
 		qoi_desc desc;
 		pixels = qoi_read(argv[1], &desc, 0);
 		channels = desc.channels;
@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
 	if (STR_ENDS_WITH(argv[2], ".png")) {
 		encoded = stbi_write_png(argv[2], w, h, channels, pixels, 0);
 	}
-	else if (STR_ENDS_WITH(argv[2], ".qoi")) {
+	else if (STR_ENDS_WITH(argv[2], ".tmp")) {
 		encoded = qoi_write(argv[2], pixels, &(qoi_desc){
 			.width = w,
 			.height = h, 
