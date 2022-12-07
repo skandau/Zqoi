@@ -1086,23 +1086,82 @@ int Predictor<Reader, Writer>::predict() {
 
     // fast.cfg
     case 1: {
-      // 2 components
+      // 8 components
 
-      // 0 ICM 16
+      // 0 ICM 5
       if (c8==1 || (c8&0xf0)==16)
-        comp[0].c=find(comp[0].ht, 16+2, z.H(0)+16*c8);
+        comp[0].c=find(comp[0].ht, 5+2, z.H(0)+16*c8);
       comp[0].cxt=comp[0].ht[comp[0].c+(hmap4&15)];
       p[0]=stretch(comp[0].cm(comp[0].cxt)>>8);
 
-      // 1 ISSE 19 0
+      // 1 ISSE 13 0
       {
         if (c8==1 || (c8&0xf0)==16)
-          comp[1].c=find(comp[1].ht, 21, z.H(1)+16*c8);
+          comp[1].c=find(comp[1].ht, 15, z.H(1)+16*c8);
         comp[1].cxt=comp[1].ht[comp[1].c+(hmap4&15)];
         int *wt=(int*)&comp[1].cm[comp[1].cxt*2];
         p[1]=clamp2k((wt[0]*p[0]+wt[1]*64)>>16);
       }
-      return squash(p[1]);
+
+      // 2 ISSE 17 1
+      {
+        if (c8==1 || (c8&0xf0)==16)
+          comp[2].c=find(comp[2].ht, 19, z.H(2)+16*c8);
+        comp[2].cxt=comp[2].ht[comp[2].c+(hmap4&15)];
+        int *wt=(int*)&comp[2].cm[comp[2].cxt*2];
+        p[2]=clamp2k((wt[0]*p[1]+wt[1]*64)>>16);
+      }
+
+      // 3 ISSE 18 2
+      {
+        if (c8==1 || (c8&0xf0)==16)
+          comp[3].c=find(comp[3].ht, 20, z.H(3)+16*c8);
+        comp[3].cxt=comp[3].ht[comp[3].c+(hmap4&15)];
+        int *wt=(int*)&comp[3].cm[comp[3].cxt*2];
+        p[3]=clamp2k((wt[0]*p[2]+wt[1]*64)>>16);
+      }
+
+      // 4 ISSE 18 3
+      {
+        if (c8==1 || (c8&0xf0)==16)
+          comp[4].c=find(comp[4].ht, 20, z.H(4)+16*c8);
+        comp[4].cxt=comp[4].ht[comp[4].c+(hmap4&15)];
+        int *wt=(int*)&comp[4].cm[comp[4].cxt*2];
+        p[4]=clamp2k((wt[0]*p[3]+wt[1]*64)>>16);
+      }
+
+      // 5 ISSE 19 4
+      {
+        if (c8==1 || (c8&0xf0)==16)
+          comp[5].c=find(comp[5].ht, 21, z.H(5)+16*c8);
+        comp[5].cxt=comp[5].ht[comp[5].c+(hmap4&15)];
+        int *wt=(int*)&comp[5].cm[comp[5].cxt*2];
+        p[5]=clamp2k((wt[0]*p[4]+wt[1]*64)>>16);
+      }
+
+      // 6 MATCH 22 24
+      if (comp[6].a==0) p[6]=0;
+      else {
+        comp[6].c=comp[6].ht((comp[6].limit>>3)
+           -comp[6].b)>>(7-(comp[6].limit&7))&1;
+        p[6]=stretch(comp[6].cxt*(comp[6].c*-2+1)&32767);
+      }
+
+      // 7 MIX 16 0 7 24 255
+      {
+        comp[7].cxt=z.H(7)+(c8&255);
+        comp[7].cxt=(comp[7].cxt&(comp[7].c-1))*7;
+        int* wt=(int*)&comp[7].cm[comp[7].cxt];
+        p[7]=(wt[0]>>8)*p[0];
+        p[7]+=(wt[1]>>8)*p[1];
+        p[7]+=(wt[2]>>8)*p[2];
+        p[7]+=(wt[3]>>8)*p[3];
+        p[7]+=(wt[4]>>8)*p[4];
+        p[7]+=(wt[5]>>8)*p[5];
+        p[7]+=(wt[6]>>8)*p[6];
+        p[7]=clamp2k(p[7]>>8);
+      }
+      return squash(p[7]);
     }
 
     // mid.cfg
@@ -1407,9 +1466,9 @@ void Predictor<Reader, Writer>::update(int y) {
 
     // fast.cfg
     case 1: {
-      // 2 components
+      // 8 components
 
-      // 0 ICM 16
+      // 0 ICM 5
       {
         comp[0].ht[comp[0].c+(hmap4&15)]=
             st.next(comp[0].ht[comp[0].c+(hmap4&15)], y);
@@ -1417,13 +1476,81 @@ void Predictor<Reader, Writer>::update(int y) {
         pn+=int(y*32767-(pn>>8))>>2;
       }
 
-      // 1 ISSE 19 0
+      // 1 ISSE 13 0
       {
         int err=y*32767-squash(p[1]);
         int *wt=(int*)&comp[1].cm[comp[1].cxt*2];
         wt[0]=clamp512k(wt[0]+((err*p[0]+(1<<12))>>13));
         wt[1]=clamp512k(wt[1]+((err+16)>>5));
         comp[1].ht[comp[1].c+(hmap4&15)]=st.next(comp[1].cxt, y);
+      }
+
+      // 2 ISSE 17 1
+      {
+        int err=y*32767-squash(p[2]);
+        int *wt=(int*)&comp[2].cm[comp[2].cxt*2];
+        wt[0]=clamp512k(wt[0]+((err*p[1]+(1<<12))>>13));
+        wt[1]=clamp512k(wt[1]+((err+16)>>5));
+        comp[2].ht[comp[2].c+(hmap4&15)]=st.next(comp[2].cxt, y);
+      }
+
+      // 3 ISSE 18 2
+      {
+        int err=y*32767-squash(p[3]);
+        int *wt=(int*)&comp[3].cm[comp[3].cxt*2];
+        wt[0]=clamp512k(wt[0]+((err*p[2]+(1<<12))>>13));
+        wt[1]=clamp512k(wt[1]+((err+16)>>5));
+        comp[3].ht[comp[3].c+(hmap4&15)]=st.next(comp[3].cxt, y);
+      }
+
+      // 4 ISSE 18 3
+      {
+        int err=y*32767-squash(p[4]);
+        int *wt=(int*)&comp[4].cm[comp[4].cxt*2];
+        wt[0]=clamp512k(wt[0]+((err*p[3]+(1<<12))>>13));
+        wt[1]=clamp512k(wt[1]+((err+16)>>5));
+        comp[4].ht[comp[4].c+(hmap4&15)]=st.next(comp[4].cxt, y);
+      }
+
+      // 5 ISSE 19 4
+      {
+        int err=y*32767-squash(p[5]);
+        int *wt=(int*)&comp[5].cm[comp[5].cxt*2];
+        wt[0]=clamp512k(wt[0]+((err*p[4]+(1<<12))>>13));
+        wt[1]=clamp512k(wt[1]+((err+16)>>5));
+        comp[5].ht[comp[5].c+(hmap4&15)]=st.next(comp[5].cxt, y);
+      }
+
+      // 6 MATCH 22 24
+      {
+        if (comp[6].c!=y) comp[6].a=0;
+        comp[6].ht(comp[6].limit>>3)+=comp[6].ht(comp[6].limit>>3)+y;
+        if ((++comp[6].limit&7)==0) {
+          int pos=comp[6].limit>>3;
+          if (comp[6].a==0) {
+            comp[6].b=pos-comp[6].cm(z.H(6));
+            if (comp[6].b&(comp[6].ht.size()-1))
+              while (comp[6].a<255 && comp[6].ht(pos-comp[6].a-1)
+                     ==comp[6].ht(pos-comp[6].a-comp[6].b-1))
+                ++comp[6].a;
+          }
+          else comp[6].a+=comp[6].a<255;
+          comp[6].cm(z.H(6))=pos;
+          if (comp[6].a>0) comp[6].cxt=2048/comp[6].a;
+        }
+      }
+
+      // 7 MIX 16 0 7 24 255
+      {
+        int err=(y*32767-squash(p[7]))*24>>4;
+        int* wt=(int*)&comp[7].cm[comp[7].cxt];
+          wt[0]=clamp512k(wt[0]+((err*p[0]+(1<<12))>>13));
+          wt[1]=clamp512k(wt[1]+((err*p[1]+(1<<12))>>13));
+          wt[2]=clamp512k(wt[2]+((err*p[2]+(1<<12))>>13));
+          wt[3]=clamp512k(wt[3]+((err*p[3]+(1<<12))>>13));
+          wt[4]=clamp512k(wt[4]+((err*p[4]+(1<<12))>>13));
+          wt[5]=clamp512k(wt[5]+((err*p[5]+(1<<12))>>13));
+          wt[6]=clamp512k(wt[6]+((err*p[6]+(1<<12))>>13));
       }
       break;
     }
@@ -1758,18 +1885,38 @@ void ZPAQL<Reader, Writer>::run(U32 input) {
     // fast.cfg
     case 1: {
       a = input;
-      m(b) = a;
+      ++c;
+      m(c) = a;
+      b = c;
       a = 0;
-      d = 0;
+      d = 1;
+      a = (a+m(b)+512)*773;
+      h(d) = a;
+      --b;
+      ++d;
+      a = (a+m(b)+512)*773;
+      h(d) = a;
+      --b;
+      ++d;
+      a = (a+m(b)+512)*773;
+      h(d) = a;
+      --b;
+      ++d;
+      a = (a+m(b)+512)*773;
+      h(d) = a;
+      --b;
+      ++d;
+      a = (a+m(b)+512)*773;
+      h(d) = a;
+      --b;
+      ++d;
       a = (a+m(b)+512)*773;
       --b;
       a = (a+m(b)+512)*773;
       h(d) = a;
       ++d;
-      --b;
-      a = (a+m(b)+512)*773;
-      --b;
-      a = (a+m(b)+512)*773;
+      a = m(c);
+      a <<= (8&31);
       h(d) = a;
       return;
     }
